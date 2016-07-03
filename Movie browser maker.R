@@ -4,20 +4,21 @@ library(tidyr)
 library(stringdist)
 library(ggplot2)
 library(rvest)
+library(htmltools)
 
 
 ###### Fix path here:
 paff <- "K:/Movies and TV/Movies"
 #########
 
-######## PART 1 ################
+######## PART 1 get list of movies with basic metadata ################
 ## Load files or get list:
 if (!file.exists("files.csv")){
   filesList <- list.files(paff)
 } else {
   filesList <- read.csv("files.csv",stringsAsFactors = F)
-  filesList <- filesList[,2]}
-
+  filesList <- filesList[,2]
+}
 # grep("\\.",filesList,value = T)
 
 ## Make a data.frame
@@ -27,8 +28,8 @@ f <- data.frame(n=filesList,y="",m="")
 f$y <- gsub(".+(\\d{4}).+","\\1",f$n) %>% as.numeric()
 
 ## Figure out what extensions
-# gsub(".+\\.","",f$n) %>% table() %>% data.frame %>% 
-#   arrange(Freq) %>% tail(10)
+gsub(".+\\.","",f$n) %>% table() %>% data.frame %>%
+  arrange(Freq) %>% tail(10)
 
 ## and remove em
 f$n <- gsub("\\.m4v|\\.mov|\\.avi|\\.mp4|\\.mkv|\\.divx|\\.vob|\\.flv|\\.mpg","",f$n)
@@ -37,7 +38,7 @@ f$n <- gsub("\\.m4v|\\.mov|\\.avi|\\.mp4|\\.mkv|\\.divx|\\.vob|\\.flv|\\.mpg",""
 gsub("\\-1.*","",f$n) -> f$n
 gsub("\\[xX][vV][iI][dD].*","",f$n) -> f$n
 gsub("\\[.+|\\(.+|\\{.+","",f$n) -> f$n
-gsub("\\d{4}.*","",f$n) -> f$n
+gsub("(?<=.)\\d{4}.*","",f$n,perl = T) -> f$n
 
 ## And fix spaces
 gsub("\\.|\\_"," ",f$n) -> f$n
@@ -45,219 +46,155 @@ gsub("  "," ",f$n) -> f$n
 gsub("^\\s+|\\s+$", "", f$n) -> f$n
 tolower(f$n) -> f$n
 
+## Now lastly trim everything:
+trim <- function (x) gsub("^\\s+|\\s+$", "", x)
+f$n <- trim(f$n)
+
 ## Now search for imdb links, putting the year if I got it.
 ## The surrounding quotes will help give good catches
-f$v <- paste('movie imdb "',f$n,'" (',f$y,')',sep="")
+f$v <- paste(' imdb "',f$n,'" (',f$y,')',sep="")
 f$v <- gsub(" \\(NA\\)","",f$v)
 f$v <- gsub(" ","+",f$v)
 
-## dim the list that will get the bing results
-hits <- data.frame(SearchTitle=0,Link=0,Title=0,dist=0)
 
-## OK, now feed each into Bing to get the search results. Look for:
-##- CORRECT imdb link
-##- youtube trailer link 
-##- rotten tomatoes score
-##- 
-
-for (i in 1:length(f$v)){
-  d <- read_html(paste("http://www.bing.com/search?q=",f$v[i],sep=""))
-  # e <- d %>% html_nodes("h2 a")
-  e <- d %>% html_nodes(".b_srtxtstarcolor , h2 a , .b_algo a strong") 
-  ## imdb. Look for this format: www.imdb.com/title/tt0315733/
+## OK, go get the data!
+if(!file.exists("hits.csv")){
+  ## dim the list that will get the bing results
+  hits <- data.frame(RealTitle=0,SearchTitle=0,imdbLink=0,YoutubeLink=0,RTscore=0,Paff=0)
   
+  ## OK, now feed each into Bing to get the search results. Look for:
+  ##- CORRECT imdb link
+  ##- youtube trailer link 
+  ##- rotten tomatoes/metacritic score 
+  
+  #length(f$v)
+  st <- Sys.time()
+  for (i in 1:length(f$v)){
+    hits[i,1] <- f$n[i]
+    hits[i,6] <- f$n[i]
+    
+    d <- read_html(paste("http://www.bing.com/search?q=",f$v[i],sep=""))
+    # e <- d %>% html_nodes("h2 a")
+    e <- d %>% html_nodes(".b_srtxtstarcolor , h2 a , .b_algo a strong") 
+  
+    ## Real name. Look at all text and find the most frequent... that's probably the name
+    # hits[i,2] <- html_text(e) %>% table %>% head(1) %>% as.data.frame() %>% row.names()
+    try(hits[i,2] <- gsub(" *\\(\\d{4}\\).*","",html_text(e)[grep("imdb.com/title/tt\\d+/$",html_attr(e,"href"))])[1])
+  
+    ## imdb. Look for this format: www.imdb.com/title/tt0315733/
+    try(hits[i,3] <- html_attr(e,"href")[grep("imdb.com/title/tt\\d+/$",html_attr(e,"href"))][1])
+    
+    ## youtube trailer
+    try(hits[i,4] <- html_attr(e,"href")[grep("youtube.+[Tt]railer",e)][1])
+    
+    ## Get scores
+    try(hits[i,5] <-  paste(html_text(e)[grep("b_srtxtstarcolor.+%",e)-2],html_text(e)[grep("b_srtxtstarcolor.+%",e)])[1])
+    cat(paste(i,"'"))
+    }
+  et <- Sys.time()  
+  et-st
+  
+  ## Ok, that does a pretty good job.. but not a perfect job. Let's find out which movies were missed 
+  ## and retry the search without the quotes tho... that should let Bing's NLP engine help us out a bit.
+  
+  hits.bad <- hits %>% filter(is.na(SearchTitle),!is.na(RealTitle))
+  hits.bad$RealTitle <- gsub(" ","%20",hits.bad$RealTitle)
+  
+  for (i in 1:nrow(hits.bad)){
+    d <- read_html(paste('http://www.bing.com/search?q=imdb+',hits.bad$RealTitle[i],sep=""))
+    # e <- d %>% html_nodes("h2 a")
+    e <- d %>% html_nodes(".b_srtxtstarcolor , h2 a , .b_algo a strong") 
+    try(hits.bad[i,3] <- html_attr(e,"href")[grep("imdb.com/title/tt\\d+/$",html_attr(e,"href"))][1])
+    try(hits.bad[i,4] <- html_attr(e,"href")[grep("youtube.+[Tt]railer",e)][1])
+    try(hits.bad[i,5] <-  paste(html_text(e)[grep("b_srtxtstarcolor.+%",e)-2],html_text(e)[grep("b_srtxtstarcolor.+%",e)])[1])
+    cat(paste(i,"'"))
   }
   
-
-xxxxxxxxxxxxxxxxx what do I capture?
+  hits %>% filter(!is.na(SearchTitle)) %>%
+    bind_rows(hits.bad) -> hits
   
-  
-  
-  hits[i,1] <- f$n[i]
-  hits[i,2] <- as.character(winner[1,1])
-  hits[i,3] <- as.character(winner[1,2])
-  hits[i,4] <- stringdist(tolower(hits[i,1]),tolower(hits[i,3]),method="qgram")
-  cat(paste(i,";",sep="")) ## for long waits
+  ## Save it for posterity  
+  write.csv(hits,"hits.csv")
+} else {
+  ## or just read in the hits
+  hits <- read.csv("hits.csv",stringsAsFactors = F)
+  hits <- hits[,-1]
 }
 
-hits %>% View
-
-# or just read in the hits
-write.csv(hits,"hits.csv")
-
-
 ######### PART 2 ################
+## Could also get the Script and do EmoMo and feeling chart...............................................
 
-hits$Title %>% table %>% as.data.frame() %>% filter(Freq>1)
+## OK, come up w/ some reports:
+## Are there any duplicates?:  
+hits$RealTitle %>% table %>% as.data.frame() %>% filter(Freq>1) -> Dups
 
-hits$Link <- gsub("awards","",hits$Link)
-hits$Link <- paste("http://",gsub("/\"","/",hits$Link),sep="")
+## What about movies that were STILL not recognized?
+gsub("%20"," ",hits %>% filter(is.na(SearchTitle)) %>% select(RealTitle)) -> UnFound
 
-hits$paf <- filesList
+## OK, now go get what I need out of imdb... 
+## I want Year, Length, Category, Rating, Description, Pic, Awards, popularity
+## (mebbe actors, director?) ...............................
 
-## OK, now go get what I need out of imdb... huh... httr dont work, use rvest
-## I want Year, Length, Category, Rating, Desc, Pic, mebbe actors
-library(rvest)
-
-for (i in 133:nrow(hits)){
-  if(grepl("title",hits$Link[i])){
-    a <- read_html(hits$Link[i])
-    try(hits$yr[i] <- a %>% html_node(".header a") %>% html_text() %>% as.numeric())
-    try(hits$le[i] <- a %>% html_node("#overview-top time") %>% html_text() %>% unlist)
-    try(hits$ca[i] <- a %>% html_node(".infobar .itemprop") %>% html_text())
-    try(hits$ra[i] <- a %>% html_node("strong span") %>%
+for (i in 1:nrow(hits)){
+  if(!is.na(hits$imdbLink[i])){
+    a <- read_html(hits$imdbLink[i])
+    try(hits$yr[i] <- a %>% html_node("#titleYear a") %>% html_text() %>% as.numeric())
+    try(hits$le[i] <- a %>% html_node("#title-overview-widget time") %>% html_text() %>% unlist)
+    try(hits$ca[i] <- a %>% html_node(".subtext .itemprop") %>% html_text())
+    try(hits$ra[i] <- a %>% html_node(".ratingValue span") %>%
       html_text() %>% as.numeric())
-    try(hits$de[i] <- a %>% html_nodes("#overview-top p") %>%.[2]%>% html_text())
-    try(hits$pi[i] <- a %>% html_node("#img_primary img") %>% html_attr("src"))
-    try(hits$ac[i] <- a %>% html_nodes("#titleCast .itemprop span") %>% html_text() %>% unlist)
+    try(hits$de[i] <- a %>% html_nodes(".summary_text") %>% html_text())
+    try(hits$pi[i] <- a %>% html_node("#title-overview-widget img") %>% html_attr("src"))
+    try(hits$aw[i] <- a %>% html_nodes("#titleAwardsRanks span:nth-child(3)") %>% html_text() %>% unlist)
+    try(hits$po[i] <- gsub(",","",a %>% html_nodes("#title-overview-widget .small") %>% html_text()) %>% as.numeric() %>% max(na.rm=T))
+    
     cat(paste(i,";",sep="")) ## for long waits
   }
 }
 
+## Get rid of 10 things I hate about you... not sure wtf...
+hits$pi[hits$pi =="http://ia.media-imdb.com/images/M/MV5BMTI4MzU5OTc2MF5BMl5BanBnXkFtZTYwNzQxMjc5._V1_UY268_CR3,0,182,268_AL_.jpg"] <- NA
+
+write.csv(hits,"hits.csv")
+
+## Create image of imdb rating vs popularity: 
+RaPo <- ggplot(hits,aes(x=po,y=ra,label=RealTitle))+geom_point()
+# Rapo
+# ggplotly()
+
+# xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx change over to single filter + Sort
+# xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx Investigate link b/w imdb, rottentomatoes and metacritic... maybe only one is needed?
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX investigate relationship RealTitle vs SearchTitle
+# xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx http://www.imsdb.com ... just saying.... emomo? Cluster analysis on emomo shape category? Other features?
+# xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx Change scrollbar css http://beautifulpixels.com/goodies/create-custom-webkit-scrollbar/
+## Prepare youtube previews, if they exist
+hits$ytl[!is.na(hits$YoutubeLink)] <-   paste('<a href="',hits$YoutubeLink[!is.na(hits$YoutubeLink)],'"><img class="buttons" height="20px" src="yt.png"></a>',sep="")
+hits$ytl[is.na(hits$YoutubeLink)] <- ""
+
+## Prepare imdb links, if they exist
+hits$imdbl[!is.na(hits$imdbLink)] <-   paste('<a href="',hits$imdbLink[!is.na(hits$imdbLink)],'"><img class="buttons" height="20px" src="imdb.png"></a>',sep="")
+hits$imdbl[is.na(hits$imdbLink)] <- ""
+
+## Prepare awards
+# xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+
+## And arrange them into a nice lil codeblock
 hits %>%
   arrange(desc(yr)) %>% 
-  mutate(code=paste('<tr><td width="300px"><img width="300px" src="',pi,'">',
-                    '<a target="_blank" href="', paf,'"><h3>',
-                    Title,' (',yr,')', '</h3></a><br>',
-                    de,
-                    ' <br><br>Rating: ',ra,' || ',le,' || ',ca,
-                    '<br><a target="_blank" href="',Link,'"> >>IMDB<< </a><br>',
-                    '</td></tr>',
-                    sep="")) %>%
-  select(code)-> code
+  mutate(code=paste('<div class="color-shape small round red isotope-item', ca, ' ', ra, ' ', po, 
+                    '" data-genre="',ca,'" data-rating="',ra,'" data-popularity="',po,'" style="position: absolute; left: 0px; top: 0px; transform: translate3d(725px, 275px, 0px);">',
+                    '<table><tr><td width="50%"><img class="main" src="', pi,'" width="167px"></td>',
+                    '<td width="50%"><h4>', SearchTitle,'</h4>',
+                    '<p>',yr,' ',le,' ','ca',' ', '</p>',
+                    '<p><a title="',RTscore,'">',ra,'</a>',
+                    imdbl, ytl,
+                    '<a title="',aw,'">Awards</a>',
+                    '<p class="abstract">',de ,'</p>',
+                    '</td></tr></table></div>',
+                    sep="")) %>% select(code)-> code
+
+## Done! Now put some HTML above and below that. And win.
+writeLines(c(readLines("top.txt"),
+    code[,1],readLines("end.txt")),con = "huuh.html")
 
 
-cat("<html><body><br><h1>My movies!!</h1><table border=1>",
-    code[,1],
-    "</table></body></html>",
-    file="Try 1 - all.html")
-
-## By rating!
-hits %>% arrange(desc(ra)) %>%
-  mutate(code=paste('<tr><td width="300px"><img width="300px" src="',pi,'">',
-                    '<a target="_blank" href="', paf,'"><h3>',
-                    Title,' (',yr,')', '</h3></a><br>',
-                    de,
-                    ' <br><br>Rating: ',ra,' || ',le,' || ',ca,
-                    '<br><a target="_blank" href="',Link,'"> >>IMDB<< </a><br>',
-                    '</td></tr>',
-                    sep="")) %>%
-  select(code)-> code
-
-
-cat("<html><body><br><h1>Movies by rating</h1><table border=1>",
-    code[,1],"</table></body></html>",file="Try - by rating.html")
-
-## Make function to spit out as many files as I wanna!!
-makePage <- function(y){
-  hits %>%
-    filter(ca == y) %>%
-    arrange(desc(yr)) %>%
-    mutate(code=paste('<tr><td width="300px"><img width="300px" src="',pi,'">',
-                    '<a target="_blank" href="', paf,'"><h3>',
-                    Title,' (',yr,')', '</h3></a><br>',
-                    de,
-                    ' <br><br>Rating: ',ra,' || ',le,' || ',ca,
-                    '<br><a target="_blank" href="',Link,'"> >>IMDB<< </a><br>',
-                    '</td></tr>',
-                    sep="")) %>%
-    select(code)-> code
-
-
-    cat(paste("<html><body><br><h1>My ",y," movies</h1><table border=1>",sep=""),
-    code[,1],
-    "</table></body></html>",
-    file=paste("Page for - ",y,".html",sep=""))
-}
-
-makePage("Action")
-makePage("Comedy")
-makePage("Adventure")
-makePage("Drama")
-makePage("Crime")
-makePage("Biography")
-makePage("Documentary")
-makePage("Horror")
-makePage("Animation")
-
-# ## Find the bad matches
-# hits %>% 
-#   filter(dist>9) %>%
-#   select(SearchTitle, Title) %>% View
-# 
-# a
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# ## Now compare against movies df
-# stringdistmatrix(f$n,tolower(movies$title)) -> mat
-# 
-# rownames(mat) <- f$n
-# colnames(mat) <- movies$ti
-# result <- t(sapply(seq(nrow(mat)), function(i) {
-#   j <- which.min(mat[i,])
-#   c(paste(rownames(mat)[i], colnames(mat)[j], sep='/'), mat[i,j])
-# }))
-# 
-# result <- as.data.frame(result)
-# 
-# 
-# ## and identify problems
-# result %>% 
-#   filter(as.numeric(V2)<1) %>%
-#   nrow
-# ###################################### NEed to come back to this...
-# 
-# a$forVideo <- paste('Cartoon "',
-#                     a$title,'" (',a$year,')',sep="")
-# a$surch <- paste(a$title,'</strong> (<strong>',a$year,'</strong>)',sep="")
-# 
-# ## OK, now feed each of these 'forVideo' strings into Bing to get
-# ## the search results
-# 
-# ## dim the list that will get the bing results
-# # hits <- as.list(rep("0",length(L)))
-# hits <- data.frame(SearchTitle=0,Link=0,Title=0,dist=0)
-# 
-# ## Sometimes this loop breaks for an unknown reason. If it does, just get value of i
-# ## and replace "1" in for with current value of i.
-# for (i in 1:length(a$forVideo)){
-#   d <- GET("http://www.bing.com/", 
-#            path = "search", 
-#            query = list(q = a$forVideo[i]),as="text")
-#   e <- content(d)
-#   
-#   ## OK, I have a problem... in theory, I should be xpathing this: //div[@class='b_title']
-#   ## but for some strange reason it doesn't capture all the links... so go one element above
-#   ## and then clean more. :-\
-#   
-#   stuff <- xpathSApply(e,"//li[@class='b_algo']",saveXML)
-#   # stuff <- gsub('.+"http://','',stuff)
-#   
-#   data.frame(Link = gsub(".+www\\.|.+//","",gsub('h=\\\".+','',stuff)),
-#              Title = gsub('.+>','',gsub('</strong.+','',stuff))) %>%
-#     filter(grepl("youtube.com",Link)) %>% head(1) -> winner
-#   
-#   hits[i,1] <- a$title[i]
-#   hits[i,2] <- as.character(winner[1,1])
-#   hits[i,3] <- as.character(winner[1,2])
-#   hits[i,4] <- stringdist(tolower(hits[i,1]),tolower(hits[i,3]),method="qgram")
-#   cat(paste(i,";",sep="")) ## for long waits
-# }
-# 
-# 
-# grep("hrek",movies$title,value=T)
-# 
-# 
-# 
-# 
-# 
