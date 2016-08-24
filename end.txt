@@ -1,132 +1,17 @@
-  
-</div> <!-- #container -->
-
-<script async="" src="./Awesome MovieBrowseR_files/ga.js"></script><script async="" src="./Awesome MovieBrowseR_files/ga(1).js"></script><script src="./Awesome MovieBrowseR_files/jquery-1.7.1.min.js"></script>
-<script src="./Awesome MovieBrowseR_files/jquery.ba-bbq.min.js"></script>
-<script src="./Awesome MovieBrowseR_files/jquery.isotope.min.js"></script>
-<script>
-$(function(){
-    
-  var $container = $('#container');
-  var initialOptions = {
-    itemSelector : '.color-shape',
-    masonry: {
-      columnWidth: 80
-    },
-    getSortData: {
-      color: function( $elem ) {
-        return $elem.attr('data-color');
-      },
-      shape: function( $elem ) {
-        return $elem.attr('data-shape');
-      },
-      size: function( $elem ) {
-        return $elem.attr('data-size');
-      }
-    }
-  };
-  // build a hash for all our options
-  var options = {
-    // special hash for combination filters
-    comboFilters: {}
-  };
+  </div>
 
 
-  // filter buttons
-  $('.filter').on( 'click', 'a', function( event ) {
-    event.preventDefault();
-    var $this = $(this);
-    // don't proceed if already selected
-    if ( $this.hasClass('selected') ) {
-      return false;
-    }
+</div>
 
-    // console.log('hello world');
-    var $optionSet = $this.parents('.option-set');
-    var group = $optionSet.attr('data-filter-group');
-    options.comboFilters[ group ] = $this.attr('data-filter-value');
-    $.bbq.pushState( options );
-  });
+  </div> 
 
-  var $sortBy = $('#sort-by').on( 'click', 'a', function( event ) {
-    event.preventDefault();
-    var $this = $(this);
-    // don't proceed if already selected
-    if ( $this.hasClass('selected') ) {
-      return false;
-    }
-    options.sortBy = $this.attr('data-option-value');
-    // console.log( options );
-    $.bbq.pushState( options );
-  });
+<!-- Looking for isotope.js? Use isotope.pkgd.min.js -->
+<!-- Isotope does NOT require jQuery. But it does make things easier -->
+<script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
+<script>window.jQuery || document.write('<script src="js/jquery.min.js"><\/script>')</script>
 
-  function selectLink( $link ) {
-    $link.parents('.option-set').find('.selected').removeClass('selected');
-    $link.addClass('selected')
-  }
-
-  var location = window.location;
-  var $comboFilterOptionSets = $('.combo-filters .option-set');
+  <script src="js/isotope-docs.min.js"></script>
 
 
-  function getComboFilterSelector( comboFilters ) {
-    // build filter
-    var isoFilters = [];
-    var filterValue, $link, $optionSet;
-    for ( var prop in comboFilters ) {
-      filterValue = comboFilters[ prop ];
-      isoFilters.push( filterValue );
-      // change selected combo filter link
-      $optionSet = $comboFilterOptionSets.filter('[data-filter-group="' + prop + '"]');
-      $link = $optionSet.find('a[data-filter-value="' + filterValue + '"]');
-      selectLink( $link );
-    }
-    var selector = isoFilters.join('');
-    return selector;
-  }
-
-  $( window ).on( 'hashchange', function() {
-    // get options from hash
-    if ( location.hash ) {
-      $.extend( options, $.deparam.fragment( location.hash, true ) );
-    }
-    // build options from hash and initial options
-    var isoOptions = $.extend( {}, initialOptions, options );
-
-    if ( options.comboFilters ) {
-      isoOptions.filter = getComboFilterSelector( options.comboFilters );
-    }
-
-    // change selected link for sortBy
-    if ( options.sortBy ) {
-      var $link = $sortBy.find('a[data-option-value="' + options.sortBy + '"]');
-      selectLink( $link );
-    }
-
-    $container.isotope( isoOptions );
-  })
-    // trigger hashchange to capture initial hash options
-    .trigger( 'hashchange' );
-
-});
-  
-</script>
-
-
-    
-    <footer>
-      MovieBrowseR by Amit Kohli; layout uses Isotope V1 by <a href="http://desandro.com/">David DeSandro</a> / <a href="http://metafizzy.co/">Metafizzy</a>
-    </footer>
-    
-  
-
-  <!-- analytics -->
-  <script>
-    var _gaq=[['_setAccount','UA-592624-5'],['_trackPageview'],['_setDomainName', '.metafizzy.co']];
-    (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];g.async=1;
-    g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
-    s.parentNode.insertBefore(g,s)}(document,'script'));
-  </script>
-
-
-</section></body></html>
+</body>
+</html>

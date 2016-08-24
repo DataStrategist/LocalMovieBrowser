@@ -15,6 +15,7 @@ paff <- "K:/Movies and TV/Movies"
 ## Load files or get list:
 if (!file.exists("files.csv")){
   filesList <- list.files(paff)
+  write.csv(filesList,"files.csv")
 } else {
   filesList <- read.csv("files.csv",stringsAsFactors = F)
   filesList <- filesList[,2]
@@ -115,47 +116,47 @@ if(!file.exists("hits.csv")){
   
   ## Save it for posterity  
   write.csv(hits,"hits.csv")
+  
+  ######### PART 2 ################
+  ## Could also get the Script and do EmoMo and feeling chart...............................................
+  
+  ## OK, come up w/ some reports:
+  ## Are there any duplicates?:  
+  hits$RealTitle %>% table %>% as.data.frame() %>% filter(Freq>1) -> Dups
+  
+  ## What about movies that were STILL not recognized?
+  gsub("%20"," ",hits %>% filter(is.na(SearchTitle)) %>% select(RealTitle)) -> UnFound
+  
+  ## OK, now go get what I need out of imdb... 
+  ## I want Year, Length, Category, Rating, Description, Pic, Awards, popularity
+  ## (mebbe actors, director?) ...............................
+  
+  for (i in 1:nrow(hits)){
+    if(!is.na(hits$imdbLink[i])){
+      a <- read_html(hits$imdbLink[i])
+      try(hits$yr[i] <- a %>% html_node("#titleYear a") %>% html_text() %>% as.numeric())
+      try(hits$le[i] <- a %>% html_node("#title-overview-widget time") %>% html_text() %>% unlist)
+      try(hits$ca[i] <- a %>% html_node(".subtext .itemprop") %>% html_text())
+      try(hits$ra[i] <- a %>% html_node(".ratingValue span") %>%
+            html_text() %>% as.numeric())
+      try(hits$de[i] <- a %>% html_nodes(".summary_text") %>% html_text())
+      try(hits$pi[i] <- a %>% html_node("#title-overview-widget img") %>% html_attr("src"))
+      try(hits$aw[i] <- a %>% html_nodes("#titleAwardsRanks span:nth-child(3)") %>% html_text() %>% unlist)
+      try(hits$po[i] <- gsub(",","",a %>% html_nodes("#title-overview-widget .small") %>% html_text()) %>% as.numeric() %>% max(na.rm=T))
+      
+      cat(paste(i,";",sep="")) ## for long waits
+      
+      ## Get rid of 10 things I hate about you... not sure wtf...
+      hits$pi[hits$pi =="http://ia.media-imdb.com/images/M/MV5BMTI4MzU5OTc2MF5BMl5BanBnXkFtZTYwNzQxMjc5._V1_UY268_CR3,0,182,268_AL_.jpg"] <- NA
+      
+      write.csv(hits,"hits.csv")
+    }
+  }
 } else {
   ## or just read in the hits
   hits <- read.csv("hits.csv",stringsAsFactors = F)
   hits <- hits[,-1]
 }
-
-######### PART 2 ################
-## Could also get the Script and do EmoMo and feeling chart...............................................
-
-## OK, come up w/ some reports:
-## Are there any duplicates?:  
-hits$RealTitle %>% table %>% as.data.frame() %>% filter(Freq>1) -> Dups
-
-## What about movies that were STILL not recognized?
-gsub("%20"," ",hits %>% filter(is.na(SearchTitle)) %>% select(RealTitle)) -> UnFound
-
-## OK, now go get what I need out of imdb... 
-## I want Year, Length, Category, Rating, Description, Pic, Awards, popularity
-## (mebbe actors, director?) ...............................
-
-for (i in 1:nrow(hits)){
-  if(!is.na(hits$imdbLink[i])){
-    a <- read_html(hits$imdbLink[i])
-    try(hits$yr[i] <- a %>% html_node("#titleYear a") %>% html_text() %>% as.numeric())
-    try(hits$le[i] <- a %>% html_node("#title-overview-widget time") %>% html_text() %>% unlist)
-    try(hits$ca[i] <- a %>% html_node(".subtext .itemprop") %>% html_text())
-    try(hits$ra[i] <- a %>% html_node(".ratingValue span") %>%
-      html_text() %>% as.numeric())
-    try(hits$de[i] <- a %>% html_nodes(".summary_text") %>% html_text())
-    try(hits$pi[i] <- a %>% html_node("#title-overview-widget img") %>% html_attr("src"))
-    try(hits$aw[i] <- a %>% html_nodes("#titleAwardsRanks span:nth-child(3)") %>% html_text() %>% unlist)
-    try(hits$po[i] <- gsub(",","",a %>% html_nodes("#title-overview-widget .small") %>% html_text()) %>% as.numeric() %>% max(na.rm=T))
-    
-    cat(paste(i,";",sep="")) ## for long waits
-  }
-}
-
-## Get rid of 10 things I hate about you... not sure wtf...
-hits$pi[hits$pi =="http://ia.media-imdb.com/images/M/MV5BMTI4MzU5OTc2MF5BMl5BanBnXkFtZTYwNzQxMjc5._V1_UY268_CR3,0,182,268_AL_.jpg"] <- NA
-
-write.csv(hits,"hits.csv")
 
 ## Create image of imdb rating vs popularity: 
 RaPo <- ggplot(hits,aes(x=po,y=ra,label=RealTitle))+geom_point()
@@ -181,20 +182,25 @@ hits$imdbl[is.na(hits$imdbLink)] <- ""
 ## And arrange them into a nice lil codeblock
 hits %>%
   arrange(desc(yr)) %>% 
-  mutate(code=paste('<div class="color-shape small round red isotope-item', ca, ' ', ra, ' ', po, 
-                    '" data-genre="',ca,'" data-rating="',ra,'" data-popularity="',po,'" style="position: absolute; left: 0px; top: 0px; transform: translate3d(725px, 275px, 0px);">',
+  mutate(code=paste('<div class="element-item ', ca, '">',
                     '<table><tr><td width="50%"><img class="main" src="', pi,'" width="167px"></td>',
-                    '<td width="50%"><h4>', SearchTitle,'</h4>',
-                    '<p>',yr,' ',le,' ','ca',' ', '</p>',
-                    '<p><a title="',RTscore,'">',ra,'</a>',
+                    '<td width="50%">',
+                    '<h4>', SearchTitle,'</h4>',
+                    '<h5>(', RealTitle,')</h5>',
+                    '<span class="ca">', ca, '</span>',
+                    '<span class="year"> (', yr, ') </span>',
+                    '<span class="le"> ', le, ' </span>',
+                    '<span class="rating"> <', ra, '> </span>',
+                    '<span><a title="',RTscore,'"></a>',
                     imdbl, ytl,
                     '<a title="',aw,'">Awards</a>',
-                    '<p class="abstract">',de ,'</p>',
-                    '</td></tr></table></div>',
+                    '</span><p class="abstract">',de ,'</p>',
+                    '</td></tr></table>',
+                    '</div>',
                     sep="")) %>% select(code)-> code
 
 ## Done! Now put some HTML above and below that. And win.
 writeLines(c(readLines("top.txt"),
-    code[,1],readLines("end.txt")),con = "huuh.html")
+    code[,1],readLines("end.txt")),con = paste("isotope-docs/newTry-",Sys.Date() ,".html",sep="")) 
 
 

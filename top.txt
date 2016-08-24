@@ -1,95 +1,63 @@
+<!doctype html>
+<html class="export">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width">
+  <meta name="description" content="filter &amp; sort magical layouts">
 
-<!DOCTYPE html>
-<!-- saved from url=(0120)file:///D:/Dropbox/My%20projects/moviebrowseR/Combo%20filters,%20sorting,%20AND%20hash%20history%20%C2%B7%20Isotope.html -->
-<html lang="en" class="csstransforms csstransforms3d csstransitions"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  
-  
-  <title>Awesome MovieBrowseR </title>
-  
-  <!--[if lt IE 9]><script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
-  
-  <link rel="stylesheet" href="./Awesome MovieBrowseR_files/style.css">
-  
-  <!-- scripts at bottom of page -->
-  
-  <!-- <script src="http://desandro.com/mint/?script"></script> -->
+  <title>MovieBrowseR</title>
+
+    <!-- Isotope does not require any CSS files -->
+    <link rel="stylesheet" href="css/isotope-docs.css" media="screen">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:site" content="@themexindian">
+  <meta name="twitter:url" content="http://amitkohli.com">
+  <meta name="twitter:title" content="MovieBrowser">
+  <meta name="twitter:description" content="Organize your local movies">
 
 </head>
-<body class="tests " cz-shortcut-listen="true">
+<body class="page--index" data-page="index">
 
-  <section>
-    
-      <h1>Awesome MovieBrowseR</h1>
-    
-
-    <section id="copy">
-  <p>Movies are great. Let's watch some movies!</p>
-</section>
-
-<section id="options" class="clearfix combo-filters">
-  <div class="clearfix">
-    <h3>Filters</h3>
-
-    
-      <div class="option-combo color">
-        <h4>color</h4>
-        <ul class="filter option-set clearfix " data-filter-group="color"> 
-          <li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#filter-color-any" data-filter-value="" class="selected">any</a>
-          
-            </li><li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#filter-color-red" data-filter-value=".red">red</a>
-          
-            </li><li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#filter-color-blue" data-filter-value=".blue">blue</a>
-          
-            </li><li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#filter-color-yellow" data-filter-value=".yellow">yellow</a>
-          
-        </li></ul>
-      </div>
-    
-      <div class="option-combo size">
-        <h4>size</h4>
-        <ul class="filter option-set clearfix " data-filter-group="size"> 
-          <li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#filter-size-any" data-filter-value="" class="">any</a>
-          
-            </li><li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#filter-size-small" data-filter-value=".small">small</a>
-          
-            </li><li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#filter-size-wide" data-filter-value=".wide" class="selected">wide</a>
-          
-            </li><li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#filter-size-tall" data-filter-value=".tall">tall</a>
-          
-            </li><li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#filter-size-big" data-filter-value=".big">big</a>
-          
-        </li></ul>
-      </div>
-    
-      <div class="option-combo shape">
-        <h4>shape</h4>
-        <ul class="filter option-set clearfix " data-filter-group="shape"> 
-          <li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#filter-shape-any" data-filter-value="" class="">any</a>
-          
-            </li><li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#filter-shape-round" data-filter-value=".round">round</a>
-          
-            </li><li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#filter-shape-square" data-filter-value=".square" class="selected">square</a>
-          
-        </li></ul>
-      </div>
-    
-  </div>
-
-  <h3>Sort</h3>
   
-    <ul id="sort-by" class="option-set clearfix" data-option-key="sortBy">
-      <li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#sortBy=original-order" data-option-value="original-order" class="" data="">original-order</a></li>
-      <li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#sortBy=color" data-option-value="color" class="selected">color</a></li>
-      <li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#sortBy=size" data-option-value="size">size</a></li>
-      <li><a href="http://isotope.metafizzy.co/v1/tests/combo-sort-history.html#sortBy=shape" data-option-value="shape">shape</a></li>
-    </ul>
+<div class="hero">
+  <div class="primary-content">
+    <h1 class="hero__title">MovieBrowseR</h1>
+    <p class="hero__tagline">These are your movies!</p>
+	</div>
 
+	<div class="big-demo" data-js-module="hero-demo">
 
-</section> <!-- #options -->
+	  <div class="ui-group">
+		<h3 class="ui-group__title">Filter</h3>
+		<div class="filters button-group js-radio-button-group">
+			<button class="button is-checked" data-filter="*">show all</button>
+			<button class="button" data-filter=".Action">Action</button>
+			<button class="button" data-filter=".Comedy">Comedy</button>
+			<button class="button" data-filter=".Drama">Drama</button>
+			<button class="button" data-filter=".Horror">Horror</button>
+			<button class="button" data-filter=".Action">Action</button>
+			<button class="button" data-filter=".Biography">Biography</button>
+			<button class="button" data-filter=".Thriller">Thriller</button>
+			<button class="button" data-filter=".Adventure">Adventure</button>
+			<button class="button" data-filter=".Crime">Crime</button>
+			<button class="button" data-filter=".Mystery">Mystery</button>
+			<button class="button" data-filter=".Documentary">Documentary</button>
+			<button class="button" data-filter=".Sci-Fi">Sci-Fi</button>
+			<button class="button" data-filter=".Animation">Animation</button>
+			<button class="button" data-filter=".Family">Family</button>
+			<button class="button" data-filter=".Romance">Romance</button>
+			<button class="button" data-filter=".Fantasy">Fantasy</button>
+		</div>
+	  </div>
+	  <div class="ui-group">
+		<h3 class="ui-group__title">Sort</h3>
+		<div class="sort-by button-group js-radio-button-group">
+		  <button class="button is-checked" data-sort-by="original-order">original order</button>
+		  <button class="button" data-sort-by="rating">Rating</button>
+		  <button class="button" data-sort-by="year">Year</button>
+		</div>
+	  </div>
 
-<div id="container" class="clearfix isotope" style="position: relative; overflow: hidden; height: 1880px;">
-  
-    
-	
-	
-
+	  <div class="grid">
